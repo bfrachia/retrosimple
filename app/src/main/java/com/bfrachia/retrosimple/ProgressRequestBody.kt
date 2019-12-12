@@ -13,7 +13,7 @@ import java.io.FileInputStream
 class ProgressRequestBody(
     private val contentType: String,
     private val file: File,
-    private val onProgressUpdated: (Int) -> Unit
+    private var onProgressUpdated: ((Int) -> Unit)?
 ) : RequestBody() {
 
     private val DEFAULT_BUFFER_SIZE = 2048
@@ -40,6 +40,7 @@ class ProgressRequestBody(
                 uploaded += read.toLong()
                 sink.write(buffer, 0, read)
             }
+            onProgressUpdated = null
         }
     }
 
@@ -48,7 +49,7 @@ class ProgressRequestBody(
         private val total: Long
     ): Runnable {
         override fun run() {
-            onProgressUpdated((100*uploaded/total).toInt())
+            onProgressUpdated?.invoke((100*uploaded/total).toInt())
         }
     }
 }
