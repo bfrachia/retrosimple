@@ -37,7 +37,7 @@ class CallHandler<DATA: Any> {
                     onFailed(
                         DataWrapper(
                             errorCode = StatusCode.GENERIC_ERROR.code,
-                            showMessage = serviceResponse.showMessage
+                            showMessage = serviceResponse?.showMessage
                         )
                     )
                 }
