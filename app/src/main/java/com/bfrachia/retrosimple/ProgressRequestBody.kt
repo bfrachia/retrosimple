@@ -13,10 +13,12 @@ import java.io.FileInputStream
 class ProgressRequestBody(
     private val contentType: String,
     private val file: File,
-    private val onProgressUpdated: (Int) -> Unit
+    private var onProgressUpdated: ((Int) -> Unit)?
 ) : RequestBody() {
 
     private val DEFAULT_BUFFER_SIZE = 2048
+
+    private var alreadyUploaded = false
 
     override fun contentType(): MediaType? {
         return "${contentType}/*".toMediaTypeOrNull()
@@ -35,11 +37,14 @@ class ProgressRequestBody(
         inputStream.use { inputStream ->
             var read: Int
             val handler = Handler(Looper.getMainLooper())
-            while (inputStream.read(buffer).also { read = it } != -1) { // update progress on UI thread
-                handler.post(ProgressUpdater(uploaded, fileLength))
+            while (inputStream.read(buffer).also { read = it } != -1) {
+                if (!alreadyUploaded) {
+                    handler.post(ProgressUpdater(uploaded, fileLength))
+                }
                 uploaded += read.toLong()
                 sink.write(buffer, 0, read)
             }
+            alreadyUploaded = true
         }
     }
 
@@ -48,7 +53,7 @@ class ProgressRequestBody(
         private val total: Long
     ): Runnable {
         override fun run() {
-            onProgressUpdated((100*uploaded/total).toInt())
+            onProgressUpdated?.invoke((100*uploaded/total).toInt())
         }
     }
 }
