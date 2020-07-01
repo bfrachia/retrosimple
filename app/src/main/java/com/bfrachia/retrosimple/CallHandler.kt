@@ -3,6 +3,7 @@ package com.bfrachia.retrosimple
 import com.google.gson.Gson
 import kotlinx.coroutines.*
 import retrofit2.HttpException
+import java.lang.Exception
 
 class CallHandler<DATA: Any> {
     private var queryParameters = mutableMapOf<String, Any>()
@@ -55,19 +56,36 @@ class CallHandler<DATA: Any> {
                     onSuccess(response)
                 }
             }
-            catch (exception: HttpException) {
-                val serviceResponse = Gson().fromJson<DataWrapper<DATA>>(
-                    exception.response()?.errorBody()?.charStream(),
-                    DataWrapper::class.java
-                )
-
-                withContext(Dispatchers.Main) {
-                    onFailed(
-                        DataWrapper(
-                            errorCode = StatusCode.GENERIC_ERROR.code,
-                            showMessage = serviceResponse?.showMessage
+            catch (exception: Exception) {
+                when(exception) {
+                    is HttpException -> {
+                        val serviceResponse = Gson().fromJson<DataWrapper<DATA>>(
+                            exception.response()?.errorBody()?.charStream(),
+                            DataWrapper::class.java
                         )
-                    )
+
+                        withContext(Dispatchers.Main) {
+                            onFailed(
+                                DataWrapper(
+                                    errorCode = StatusCode.GENERIC_ERROR.code,
+                                    showMessage = serviceResponse?.showMessage
+                                )
+                            )
+                        }
+                    }
+                    else -> {
+                        withContext(Dispatchers.Main) {
+                            onFailed(
+                                DataWrapper(
+                                    errorCode = StatusCode.GENERIC_ERROR.code,
+                                    showMessage = mapOf(
+                                        "EN" to "Connection error",
+                                        "ES" to "Error de conexión"
+                                    )
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
