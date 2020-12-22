@@ -1,6 +1,7 @@
 package com.bfrachia.retrosimple
 
 import com.google.gson.Gson
+import com.google.gson.JsonParseException
 import kotlinx.coroutines.*
 import retrofit2.HttpException
 import java.lang.Exception
@@ -59,37 +60,46 @@ class CallHandler<DATA: Any> {
             catch (exception: Exception) {
                 when(exception) {
                     is HttpException -> {
-                        val serviceResponse = Gson().fromJson<DataWrapper<DATA>>(
-                            exception.response()?.errorBody()?.charStream(),
-                            DataWrapper::class.java
-                        )
-
-                        withContext(Dispatchers.Main) {
-                            onFailed(
-                                DataWrapper(
-                                    errorCode = StatusCode.GENERIC_ERROR.code,
-                                    showMessage = serviceResponse?.showMessage
-                                )
+                        try {
+                            val serviceResponse = Gson().fromJson<DataWrapper<DATA>>(
+                                exception.response()?.errorBody()?.charStream(),
+                                DataWrapper::class.java
                             )
+
+                            withContext(Dispatchers.Main) {
+                                onFailed(
+                                    DataWrapper(
+                                        errorCode = StatusCode.GENERIC_ERROR.code,
+                                        showMessage = serviceResponse?.showMessage
+                                    )
+                                )
+                            }
+                        }
+                        catch (exception: JsonParseException) {
+                            respondWithGenericError()
                         }
                     }
                     else -> {
-                        withContext(Dispatchers.Main) {
-                            onFailed(
-                                DataWrapper(
-                                    errorCode = StatusCode.GENERIC_ERROR.code,
-                                    showMessage = mapOf(
-                                        "EN" to "Connection error",
-                                        "ES" to "Error de conexión"
-                                    )
-                                )
-                            )
-                        }
+                        respondWithGenericError()
                     }
                 }
             }
         }
         return result
+    }
+
+    private suspend fun respondWithGenericError() {
+        withContext(Dispatchers.Main) {
+            onFailed(
+                DataWrapper(
+                    errorCode = StatusCode.GENERIC_ERROR.code,
+                    showMessage = mapOf(
+                        "EN" to "Connection error",
+                        "ES" to "Error de conexión"
+                    )
+                )
+            )
+        }
     }
 }
 
