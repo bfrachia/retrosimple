@@ -6,11 +6,24 @@ import kotlinx.coroutines.*
 import retrofit2.HttpException
 import java.lang.Exception
 
-class CallHandler<DATA: Any> {
+open class CallHandlerBuilder<DATA: Any> {
+    var _onFailed: ((DataWrapper<DATA>) -> Unit)? = null
+
+    interface OnFailedDefined
+
+    private class Impl : CallHandlerBuilder<Any>(), OnFailedDefined
+
+    companion object {
+        operator fun invoke(): CallHandlerBuilder<Any> = Impl()
+    }
+}
+
+class CallHandler<DATA: Any>(
+    var onFailed: (DataWrapper<DATA>) -> Unit
+) {
     private var queryParameters = mutableMapOf<String, Any>()
     lateinit var apiCall: suspend () -> DataWrapper<DATA>
     lateinit var onSuccess: (DataWrapper<DATA>) -> Unit
-    lateinit var onFailed: (DataWrapper<DATA>) -> Unit
 
     fun withApiCall(body: suspend () -> DataWrapper<DATA>) {
         this.apiCall = body
